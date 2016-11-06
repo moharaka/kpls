@@ -53,8 +53,10 @@ int init_module(void)
 	list_for_each_entry(child, &parent->d_subdirs, d_u.d_child) {
 		if (child) {
 			spin_lock_nested(&child->d_lock, DENTRY_D_LOCK_NESTED);
-			if(dtr->d_inode)/* skip negative dentries ? */
+			if(child->d_inode)/* skip negative dentries ? */
 				printk(KERN_INFO "\tChild dentry name %s\n", child->d_name.name);
+			else
+				printk(KERN_INFO "\tChild dentry name (negative) %s\n", child->d_name.name);
 			spin_unlock(&child->d_lock);
 		}
 	}
