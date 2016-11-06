@@ -37,7 +37,7 @@ int init_module(void)
 	printk(KERN_INFO "The inode address is %pK\n", dtr->d_inode);
 	if(dtr->d_inode) {
 		printk(KERN_INFO "The inode number is %lu\n", dtr->d_inode->i_ino);
-		printk(KERN_INFO "The inode size is %lld\n", dtr->d_inode->i_size);
+		printk(KERN_INFO "The inode size is %lld\n", i_size_read(dtr->d_inode));
 	}else
 		printk(KERN_INFO "Negative inode!\n");
 	printk(KERN_INFO "Dentry name %s\n", dtr->d_name.name);
