@@ -6,74 +6,80 @@
 #include <linux/fs.h>
 
 
-static char* path_param = NULL;
+static char *path_param;
 
 module_param(path_param, charp, 0);
 
-
 int init_module(void)
 {
+	int err;
 	struct path pth;
 	struct dentry *dtr;
 	struct dentry *parent;
 	struct dentry *child;
 
-	if(path_param)
-		printk(KERN_INFO "The parameter is %s\n", path_param);
+	err = 0;
+
+	if (path_param)
+		pr_info("The parameter is %s\n", path_param);
 	else {
-		printk(KERN_INFO "The parameter is empty");
+		pr_info("The parameter is empty");
 		goto out;
 	}
-	
-	if(kern_path(path_param, 0, &pth) != 0)
-		goto donexist;
+
+	err = kern_path(path_param, 0, &pth);
+	if (err)
+		goto out;
 
 	dtr = pth.dentry;
-	if(dtr == NULL)
-		goto donexist;
-	
+	BUG_ON(dtr == NULL);
+
 	/* Print dtr dtr->inode info */
 	spin_lock(&dtr->d_lock);
-	printk(KERN_INFO "The inode address is %pK\n", dtr->d_inode);
-	if(dtr->d_inode) {
-		printk(KERN_INFO "The inode number is %lu\n", dtr->d_inode->i_ino);
-		printk(KERN_INFO "The inode size is %lld\n", i_size_read(dtr->d_inode));
-	}else
-		printk(KERN_INFO "Negative inode!\n");
-	printk(KERN_INFO "Dentry name %s\n", dtr->d_name.name);
-	parent = dtr->d_parent;
+
+	pr_info("The inode address is %pK\n", dtr->d_inode);
+	if (dtr->d_inode) {
+		pr_info("The inode number is %lu\n", dtr->d_inode->i_ino);
+		pr_info("The inode size is %lld\n", i_size_read(dtr->d_inode));
+	} else
+		pr_info("Negative inode!\n");
+
+	pr_info("Dentry name %s\n", dtr->d_name.name);
 	spin_unlock(&dtr->d_lock);
-	/* Done printing dtr info*/
+	/* Done printing dtr info */
+
 
 	/* Print parent info */
+	parent = dget_parent(dtr);
+	if (IS_ROOT(parent))
+		goto put_all;
 	spin_lock(&parent->d_lock);
-	if(IS_ROOT(parent))
-		goto unlockparent;
-	printk(KERN_INFO "Parent name %s\n", parent->d_name.name);
+	pr_info("Parent name %s\n", parent->d_name.name);
 	list_for_each_entry(child, &parent->d_subdirs, d_u.d_child) {
 		if (child) {
 			spin_lock_nested(&child->d_lock, DENTRY_D_LOCK_NESTED);
-			if(child->d_inode)/* skip negative dentries ? */
-				printk(KERN_INFO "\tChild dentry name %s\n", child->d_name.name);
+			if (child->d_inode)
+				pr_info("\tChild name %s\n",
+							child->d_name.name);
 			else
-				printk(KERN_INFO "\tChild dentry name (negative) %s\n", child->d_name.name);
+				pr_info("\tChild name (negative) %s\n",
+							child->d_name.name);
 			spin_unlock(&child->d_lock);
 		}
 	}
-unlockparent:
 	spin_unlock(&parent->d_lock);
 	/* Done printing parent info*/
-	goto out;
-donexist:	
-	printk(KERN_INFO "The file %s does not exist\n", path_param);
+
+put_all:
+	dput(parent);
+	path_put(&pth);
 out:
-	return 0;
+	return err;
 }
 
 void cleanup_module(void)
 {
-	printk(KERN_INFO "Module %s unloaded\n", __FILE__);
+	pr_info("Module iprint unloaded\n");
 }
 
 MODULE_LICENSE("GPL");
-
